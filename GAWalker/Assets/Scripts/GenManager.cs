@@ -24,7 +24,7 @@ public class GenManager : MonoBehaviour {
 
 	protected Creature[] currentCreatures;
 
-	public float genDuration = 5;      //　1世代あたりの時間<s>
+	public float genDuration = 20;      //　1世代あたりの時間<s>
 	protected float genDurationLeft;    //　現在の世代の残り時間
 
 	public string namePrefix;
@@ -91,8 +91,6 @@ public class GenManager : MonoBehaviour {
 			for( int j=0; j<6; ++j ) {
 
 				finParam lp = param.creatureParams[i].finParams[j];　　
-
-
 				lp.RotRange = new Vector3(
 						Random.Range(-finRotateLimit.x, finRotateLimit.x),
 						Random.Range(-finRotateLimit.y, finRotateLimit.y),
@@ -189,27 +187,15 @@ public class GenManager : MonoBehaviour {
 	}
 
 
-	//-----------------------------------------------------
-	//【関数定義】次の世代の個体の設定
-	//-----------------------------------------------------
-	protected void calcNextGenParams() {
+　//-----------------------------------------------------
+	//【関数定義】選択
+	//　引数　scoreList：辞書型のリスト。個体番号とそれぞれのスコア（飛距離）を記録
+	//　戻り値　surviver：次の個体にパラメータがそのまま受け継がれる個体のデータの集合
+	//　その他　CreatureParam：個体（コイキング）のデータ。各関節における、軸ごとの回転値を保持
+	//　コメント　現在は飛距離のみで評価。選択方法のアイディアだけでもください！！（減点とか）
+　//-----------------------------------------------------
+  protected CreatureParam[] Select(Dictionary<int, float> scoreList){
 
-　　//　辞書型のリストを定義
-　　//　creatureCount<int>, score<float>を格納する
-		Dictionary<int, float> scoreList = new Dictionary<int, float>();
-
-		for( int i=0; i<param.creatureCount; ++i ) {
-			//Creature creature = currentCreatures[i];
-			// スコア（飛んだ高さ）を計算
-			float score = max_position_y[i] ;
-			//float score = creature.transform.position.y;
-			scoreList.Add(i, score);
-		}
-
-
-		//-----------------------------------------------------
-	　//　選択
-		//-----------------------------------------------------
 		CreatureParam[] surviver = new CreatureParam[param.surviveCount];
 		int sc = 0;
 		// OrderByDescending : 降順にソート(valueをソート時のキーとする)
@@ -225,19 +211,21 @@ public class GenManager : MonoBehaviour {
 			if( sc >= param.surviveCount ) break;　//　次の世代に残す個体数がsc(<=10)を下回ったら終了
 		}
 
-	  //　今世代の優秀な個体を、次の世代にコピーする
-		for( int i=0; i<param.surviveCount; ++i ) {
-			param.creatureParams[i] = surviver[i];
-		}
-
-		//　次の世代に新たに生成する個体の数を計算
-		int newCount = param.creatureCount - param.surviveCount;
+		return surviver;
+	}
 
 
-		//-----------------------------------------------------
-	　//　交叉
-		//-----------------------------------------------------
-		for( int i=0; i<newCount; ++i ) {
+	//-----------------------------------------------------
+	//【関数定義】交叉
+	//　引数　surviver：次の個体にパラメータがそのまま受け継がれる個体のデータの集合
+	//　戻り値　np：交叉後の個体（コイキング）のデータ
+	//　その他　surviveCount ：今世代の優秀な個体（親となる）の個体数。現在の設定は10
+	//　　　　　CreatureParam：個体（コイキング）のデータ。各関節における、軸ごとの回転値を保持
+	//　　　　　finParams    ：CreatureParamが保持している回転値（↑）
+	//　コメント　正直これ以上変えようがない気がする
+	//-----------------------------------------------------
+  protected CreatureParam Cross(CreatureParam[] surviver){
+
 			List<int> indices = new List<int>();
 			for( int j=0; j<param.surviveCount; ++j ) {
 				indices.Add(j);
@@ -259,32 +247,90 @@ public class GenManager : MonoBehaviour {
 				np.finParams[j] = cp[ Random.Range(0,2) ].finParams[j];
 			}
 
+		  return np;
+	}
+
+
+  //-----------------------------------------------------
+	//【関数定義】突然変異
+	//　引数　np：突然変異する個体のデータ
+	//　戻り値　np：突然変異後の個体のデータ
+	//　その他　finRotateLimit：各関節の回転の制限値で、x,y,z軸方向に今はそれぞれ60度（変更予定）
+	//　　　　　RotRange      ：各関節の回転範囲。finRotateLimit（↑）の範囲内でランダムで決定している
+	//　　　　　CreatureParam ：個体（コイキング）のデータ。各関節における、軸ごとの回転値を保持
+	//　　　　　finParams     ：CreatureParamが保持している回転値（↑）
+	//　コメント　変えるとしたら呼び出し元の関数かも（無能）
+	//-----------------------------------------------------
+　protected CreatureParam Mutation(CreatureParam np){
+	  //　関節のパラメータを1~4回ランダムで変更する
+	  //　（同じ関節が複数回変更されることもある）
+	  int mpc = Random.Range(1,4);
+	  for( int j=0; j<mpc; ++j ) {
+
+　　//　パラメータを突然変異させる関節をランダムに選ぶ
+		int lr = Random.Range(0,6);
+		finParam lp = np.finParams[lr];
+
+		lp.RotRange = new Vector3(
+				Random.Range(-finRotateLimit.x, finRotateLimit.x),
+				Random.Range(-finRotateLimit.y, finRotateLimit.y),
+				Random.Range(-finRotateLimit.z, finRotateLimit.z));
+
+    np.finParams[lr] = lp;
+	  }
+
+	  return np;
+  }
+
+
+	//-----------------------------------------------------
+	//【関数定義】次の世代の個体の設定
+	//-----------------------------------------------------
+	protected void calcNextGenParams() {
+
+　　//　辞書型のリストを定義
+　　//　creatureCount<int>, score<float>を格納する
+		Dictionary<int, float> scoreList = new Dictionary<int, float>();
+
+		for( int i=0; i<param.creatureCount; ++i ) {
+			//Creature creature = currentCreatures[i];
+			// スコア（飛んだ高さ）を計算
+			float score = max_position_y[i] ;
+			//float score = creature.transform.position.y;
+			scoreList.Add(i, score);
+		}
+
+
+		//-----------------------------------------------------
+	　//　選択
+		//-----------------------------------------------------
+    CreatureParam[] surviver = Select(scoreList);
+
+	  //　今世代の優秀な個体を、次の世代にコピーする
+		for( int i=0; i<param.surviveCount; ++i ) {
+			param.creatureParams[i] = surviver[i];
+		}
+
+		//　次の世代に新たに生成する個体の数を計算
+		int newCount = param.creatureCount - param.surviveCount;
+
+
+		//-----------------------------------------------------
+	　//　交叉
+		//-----------------------------------------------------
+		for( int i=0; i<newCount; ++i ) {
+			CreatureParam np = Cross(surviver);
 
 			//-----------------------------------------------------
 		　//　突然変異
 			//-----------------------------------------------------
 			if( i < param.mutationCount ) {
-
-        //　関節のパラメータを1~4回ランダムで変更する
-				//　（同じ関節が複数回変更されることもある）
-				int mpc = Random.Range(1,4);
-				for( int j=0; j<mpc; ++j ) {
-
-　　　　　 //　パラメータを突然変異させる関節をランダムに選ぶ
-					int lr = Random.Range(0,6);
-					finParam lp = np.finParams[lr];
-
-				  lp.RotRange = new Vector3(
-							Random.Range(-finRotateLimit.x, finRotateLimit.x),
-							Random.Range(-finRotateLimit.y, finRotateLimit.y),
-							Random.Range(-finRotateLimit.z, finRotateLimit.z));
-
-					np.finParams[lr] = lp;
-
-				}
+				np = Mutation(np);
       }
-　　　//　交叉する個体は、指定したMutationCount分まで突然変異する
-			param.creatureParams[i + param.surviveCount] = np;
+
+			//　交叉、突然変異した個体を次の世代に登録
+		  param.creatureParams[i + param.surviveCount] = np;
+
 		}
 	}
 }

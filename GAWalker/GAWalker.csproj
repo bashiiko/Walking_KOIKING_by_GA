@@ -90,10 +90,6 @@
     <Compile Include="Assets\Scripts\finRotator.cs" />
     <Compile Include="Assets\Scripts\GenManager.cs" />
     <Compile Include="Assets\Scripts\GenParam.cs" />
-    <Compile Include="Assets\Scripts\LegParam.cs" />
-    <Compile Include="Assets\Scripts\LegRotator.cs" />
-    <Compile Include="Assets\Scripts\Walker.cs" />
-    <Compile Include="Assets\Scripts\WalkerParam.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />
