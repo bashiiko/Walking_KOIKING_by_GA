@@ -17,6 +17,7 @@ public class GenManagerEditor : Editor {
 		obj.genDuration = EditorGUILayout.Slider("GenDuration", obj.genDuration, 1, 60);
 		obj.finRotateLimit = EditorGUILayout.Vector3Field("finRotateLimit", obj.finRotateLimit);
 		obj.bodyRotateLimit = EditorGUILayout.Vector3Field("bodyRotateLimit", obj.bodyRotateLimit);
+		obj.targetID = EditorGUILayout.IntField("targetID", obj.targetID);
 
 		if( GUILayout.Button("Export") ) {
 

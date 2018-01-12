@@ -35,10 +35,12 @@ public class GenManager : MonoBehaviour {
 	public Vector3 finRotateLimit = new Vector3(30,30,30);　　　//　ひれの回転の制限（度）
   public Vector3 bodyRotateLimit = new Vector3(20,20,20);　　　//　体の回転の制限（度）
   //public float[] max_position_y;
-  public float[] max_position_z;
+  //public float[] max_position_z;
 
 	protected float[] bestScores = new float[10];
 	protected int[] bestScoreIds = new int[10];
+
+	public int targetID = -1;           //　カメラの中心となる個体
 
 
 	//-----------------------------------------------------
@@ -69,7 +71,7 @@ public class GenManager : MonoBehaviour {
 		prepareCreatures();
 		genDurationLeft = genDuration;
 
-	  //　カメラの位置は固定（右が進行方向）
+	  //　カメラの初期位置（右が進行方向）
  　 Camera.main.transform.position = new Vector3(100, 10, 0);
     Camera.main.transform.LookAt(new Vector3(-100, 10, 0));
 
@@ -82,12 +84,12 @@ public class GenManager : MonoBehaviour {
 
 		param.genCount = 1;
 		param.creatureParams = new CreatureParam[param.creatureCount];
-    max_position_z = new float[param.creatureCount];
+    //max_position_z = new float[param.creatureCount];
     //max_position_y = new float[param.creatureCount];
 
 　　// 生物の各個体にパラメータを設定
 		for( int i=0; i<param.creatureCount; ++i ) {
-		  max_position_z[i] = 0;
+		  //max_position_z[i] = 0;
 			//max_position_y[i] = 0;
 			param.creatureParams[i].finParams = new finParam[6];
 
@@ -127,7 +129,7 @@ public class GenManager : MonoBehaviour {
 			Creature ws = obj.GetComponent<Creature>();
 			ws.Param = param.creatureParams[i];
 			currentCreatures[i] = ws;
-		  max_position_z[i] = 0;
+		  //max_position_z[i] = 0;
 		  //max_position_y[i] = 0;
 		}
 	}
@@ -151,13 +153,16 @@ public class GenManager : MonoBehaviour {
 	void FixedUpdate () {
 
 		genDurationLeft -= Time.fixedDeltaTime;
+		calcscore();
 
+    /*
 		//　各個体の高さの最高値を記録
 	  for( int i=0; i<param.creatureCount; ++i ) {
 			Creature creature = currentCreatures[i];
 			if( max_position_z[i] < creature.transform.position.z )
    		  max_position_z[i] = creature.transform.position.z;
 		}
+		*/
 
     /*
 		//　各個体の高さの最高値を記録
@@ -167,6 +172,17 @@ public class GenManager : MonoBehaviour {
    		  max_position_y[i] = creature.transform.position.y;
 		}
 		*/
+
+    //　カメラの移動
+		if( targetID < 100 && 0 <= targetID){
+		  Vector3 tp = currentCreatures[targetID].transform.position;
+		  tp.y = 0;
+   	  Camera.main.transform.position = new Vector3(tp.x + 10, tp.y + 10, tp.z);
+		  Camera.main.transform.LookAt(tp);
+    }else{
+	 　 Camera.main.transform.position = new Vector3(100, 10, 0);
+	    Camera.main.transform.LookAt(new Vector3(-100, 10, 0));
+		}
 
 		//　残り時間が0になった場合の処理
 		if( genDurationLeft < 0 ) {
@@ -207,6 +223,40 @@ public class GenManager : MonoBehaviour {
 		GUI.Label(new Rect(10, 10, 100, 40), str, style);
 	}
 
+	//-----------------------------------------------------
+  //【関数定義】ベストスコアの計算
+	//-----------------------------------------------------
+  void calcscore(){
+	  //　辞書型のリストを定義
+	  //　creatureCount<int>, score<float>を格納する
+
+		Dictionary<int, float> scoreList = new Dictionary<int, float>();
+
+	  for( int i=0; i<param.creatureCount; ++i ) {
+		  Creature creature = currentCreatures[i];
+			// スコア（進んだ距離）を計算
+		  float score = creature.transform.position.z;
+		  // スコア（飛んだ高さ）を計算
+		  //float score = max_position_y[i] ;
+		  //float score = creature.transform.position.y;
+		  scoreList.Add(i, score);
+		}
+
+		int sc = 0;
+		// OrderByDescending : 降順にソート(valueをソート時のキーとする)
+		foreach(KeyValuePair<int, float> pair in scoreList.OrderByDescending(p => p.Value) ) {
+
+			//　より前に進んだ個体を10個記録する
+			if( sc < 10 ) {
+				bestScores[sc] = pair.Value;　//　進んだ距離
+				bestScoreIds[sc] = pair.Key;　//　個体番号
+			}
+			sc++;
+
+		}
+
+	}
+
 
 　//-----------------------------------------------------
 	//【関数定義】選択
@@ -215,10 +265,15 @@ public class GenManager : MonoBehaviour {
 	//　その他　CreatureParam：個体（コイキング）のデータ。各関節における、軸ごとの回転値を保持
 	//　コメント　現在は飛距離のみで評価。選択方法のアイディアだけでもください！！（減点とか）
 　//-----------------------------------------------------
-  protected CreatureParam[] Select(Dictionary<int, float> scoreList){
+  protected CreatureParam[] Select(){
 
 		CreatureParam[] surviver = new CreatureParam[param.surviveCount];
-		int sc = 0;
+		calcscore();
+		for( int i = 0; i<param.surviveCount; i++){
+			int sc = bestScoreIds[i];
+ 		  surviver[i]= param.creatureParams[sc];
+		}
+		/*
 		// OrderByDescending : 降順にソート(valueをソート時のキーとする)
 		foreach(KeyValuePair<int, float> pair in scoreList.OrderByDescending(p => p.Value) ) {
 			surviver[sc]= param.creatureParams[pair.Key];
@@ -231,6 +286,7 @@ public class GenManager : MonoBehaviour {
 			sc++;
 			if( sc >= param.surviveCount ) break;　//　次の世代に残す個体数がsc(<=10)を下回ったら終了
 		}
+		*/
 
 		return surviver;
 	}
@@ -315,6 +371,7 @@ public class GenManager : MonoBehaviour {
 	//-----------------------------------------------------
 	protected void calcNextGenParams() {
 
+    /*
 　　//　辞書型のリストを定義
 　　//　creatureCount<int>, score<float>を格納する
 		Dictionary<int, float> scoreList = new Dictionary<int, float>();
@@ -327,12 +384,12 @@ public class GenManager : MonoBehaviour {
 			//float score = creature.transform.position.y;
 			scoreList.Add(i, score);
 		}
-
+    */
 
 		//-----------------------------------------------------
 	　//　選択
 		//-----------------------------------------------------
-    CreatureParam[] surviver = Select(scoreList);
+    CreatureParam[] surviver = Select();
 
 	  //　今世代の優秀な個体を、次の世代にコピーする
 		for( int i=0; i<param.surviveCount; ++i ) {
