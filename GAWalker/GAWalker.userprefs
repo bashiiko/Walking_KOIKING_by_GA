@@ -1,16 +1,14 @@
 ﻿<Properties StartupItem="GAWalker.csproj">
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Scripts\finRotator.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\SAColliderBuilder\Editor\SABoneColliderEditorCommon.cs">
     <Files>
-      <File FileName="Assets\Scripts\Walker.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\LegRotator.cs" Line="1" Column="1" />
       <File FileName="Assets\Scripts\GenManager.cs" Line="1" Column="1" />
       <File FileName="Assets\Scripts\GenParam.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\WalkerParam.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\LegParam.cs" Line="1" Column="1" />
       <File FileName="Assets\Scripts\Editor\GenManagerEditor.cs" Line="1" Column="1" />
       <File FileName="Assets\Scripts\Creature.cs" Line="1" Column="1" />
-      <File FileName="Assets\Scripts\finRotator.cs" Line="32" Column="1" />
+      <File FileName="Assets\Scripts\finRotator.cs" Line="1" Column="1" />
+      <File FileName="Assets\SAColliderBuilder\Readme_jp.txt" Line="1" Column="1" />
+      <File FileName="Assets\SAColliderBuilder\Editor\SABoneColliderEditorCommon.cs" Line="371" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

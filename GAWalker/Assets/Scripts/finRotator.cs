@@ -32,9 +32,9 @@ public class finRotator : MonoBehaviour {
 
     //　現在の回転値の取得（Quaternion→Vector）
     Vector3 pos = this.transform.rotation.eulerAngles;
-		pos.x += dir[0];
-		pos.y += dir[1];
-		pos.z += dir[2];
+		pos.x += 2*dir[0];
+		pos.y += 2*dir[1];
+		pos.z += 2*dir[2];
 		//　Vector→Quatanion
 		Quaternion q = Quaternion.Euler(pos);
 		this.transform.rotation = q;

@@ -32,8 +32,10 @@ public class GenManager : MonoBehaviour {
 
 	public int genCount;　　　　　 　　　//　世代数
 
-	public Vector3 finRotateLimit = new Vector3(60,60,60);　　　//　関節の回転の制限(℃)
-  public float[] max_position_y;
+	public Vector3 finRotateLimit = new Vector3(30,30,30);　　　//　ひれの回転の制限（度）
+  public Vector3 bodyRotateLimit = new Vector3(20,20,20);　　　//　体の回転の制限（度）
+  //public float[] max_position_y;
+  public float[] max_position_z;
 
 	protected float[] bestScores = new float[10];
 	protected int[] bestScoreIds = new int[10];
@@ -69,7 +71,7 @@ public class GenManager : MonoBehaviour {
 
 	  //　カメラの位置は固定（右が進行方向）
  　 Camera.main.transform.position = new Vector3(100, 10, 0);
-    Camera.main.transform.LookAt(new Vector3(-100, 10, 30));
+    Camera.main.transform.LookAt(new Vector3(-100, 10, 0));
 
 	}
 
@@ -80,21 +82,30 @@ public class GenManager : MonoBehaviour {
 
 		param.genCount = 1;
 		param.creatureParams = new CreatureParam[param.creatureCount];
-    max_position_y = new float[param.creatureCount];
+    max_position_z = new float[param.creatureCount];
+    //max_position_y = new float[param.creatureCount];
 
 　　// 生物の各個体にパラメータを設定
 		for( int i=0; i<param.creatureCount; ++i ) {
-		  max_position_y[i] = 0;
+		  max_position_z[i] = 0;
+			//max_position_y[i] = 0;
 			param.creatureParams[i].finParams = new finParam[6];
 
 　　　 //　関節は6個
 			for( int j=0; j<6; ++j ) {
 
 				finParam lp = param.creatureParams[i].finParams[j];　　
-				lp.RotRange = new Vector3(
-						Random.Range(-finRotateLimit.x, finRotateLimit.x),
-						Random.Range(-finRotateLimit.y, finRotateLimit.y),
-						Random.Range(-finRotateLimit.z, finRotateLimit.z));
+				if( j<3 ){
+				    lp.RotRange = new Vector3(
+					    	Random.Range(-bodyRotateLimit.x, bodyRotateLimit.x),
+						    Random.Range(-bodyRotateLimit.y, bodyRotateLimit.y),
+						    Random.Range(-bodyRotateLimit.z, bodyRotateLimit.z));
+					}else{
+						lp.RotRange = new Vector3(
+								Random.Range(-finRotateLimit.x, finRotateLimit.x),
+								Random.Range(-finRotateLimit.y, finRotateLimit.y),
+								Random.Range(-finRotateLimit.z, finRotateLimit.z));
+					}
 
 				param.creatureParams[i].finParams[j] = lp;
 			}
@@ -112,11 +123,12 @@ public class GenManager : MonoBehaviour {
       GameObject creature = (GameObject)Resources.Load ("Prefabs/Creature");
 			//　プレハブの生成
 			//　プレハブ名、position,Quaternion.identity
-			GameObject obj = Instantiate(creature, new Vector3((i - param.creatureCount/2) * 10, 1.5f, 0),Quaternion.identity);
+			GameObject obj = Instantiate(creature, new Vector3((i - param.creatureCount/2) * 15, 5.0f, 0),Quaternion.identity);
 			Creature ws = obj.GetComponent<Creature>();
 			ws.Param = param.creatureParams[i];
 			currentCreatures[i] = ws;
-		  max_position_y[i] = 0;
+		  max_position_z[i] = 0;
+		  //max_position_y[i] = 0;
 		}
 	}
 
@@ -143,9 +155,18 @@ public class GenManager : MonoBehaviour {
 		//　各個体の高さの最高値を記録
 	  for( int i=0; i<param.creatureCount; ++i ) {
 			Creature creature = currentCreatures[i];
+			if( max_position_z[i] < creature.transform.position.z )
+   		  max_position_z[i] = creature.transform.position.z;
+		}
+
+    /*
+		//　各個体の高さの最高値を記録
+	  for( int i=0; i<param.creatureCount; ++i ) {
+			Creature creature = currentCreatures[i];
 			if( max_position_y[i] < creature.transform.position.y )
    		  max_position_y[i] = creature.transform.position.y;
 		}
+		*/
 
 		//　残り時間が0になった場合の処理
 		if( genDurationLeft < 0 ) {
@@ -270,11 +291,17 @@ public class GenManager : MonoBehaviour {
 　　//　パラメータを突然変異させる関節をランダムに選ぶ
 		int lr = Random.Range(0,6);
 		finParam lp = np.finParams[lr];
-
-		lp.RotRange = new Vector3(
-				Random.Range(-finRotateLimit.x, finRotateLimit.x),
-				Random.Range(-finRotateLimit.y, finRotateLimit.y),
-				Random.Range(-finRotateLimit.z, finRotateLimit.z));
+		if( lr<3 ){
+				lp.RotRange = new Vector3(
+						Random.Range(-bodyRotateLimit.x, bodyRotateLimit.x),
+						Random.Range(-bodyRotateLimit.y, bodyRotateLimit.y),
+						Random.Range(-bodyRotateLimit.z, bodyRotateLimit.z));
+			}else{
+				lp.RotRange = new Vector3(
+						Random.Range(-finRotateLimit.x, finRotateLimit.x),
+						Random.Range(-finRotateLimit.y, finRotateLimit.y),
+						Random.Range(-finRotateLimit.z, finRotateLimit.z));
+			}
 
     np.finParams[lr] = lp;
 	  }
@@ -295,7 +322,8 @@ public class GenManager : MonoBehaviour {
 		for( int i=0; i<param.creatureCount; ++i ) {
 			//Creature creature = currentCreatures[i];
 			// スコア（飛んだ高さ）を計算
-			float score = max_position_y[i] ;
+			float score = max_position_z[i] ;
+			//float score = max_position_y[i] ;
 			//float score = creature.transform.position.y;
 			scoreList.Add(i, score);
 		}
