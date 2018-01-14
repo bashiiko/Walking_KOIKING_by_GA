@@ -1,7 +1,10 @@
 //-------------------------------------------------------
 //　知的情報処理の課題提出用GAアルゴリズム
 //　コイキングがより高く飛び跳ねるプログラムを目指す
-//　参考コード：http://developer.wonderpla.net/entry/blog/engineer/GeneticAlgorithm/
+//　参考コード等：http://developer.wonderpla.net/entry/blog/engineer/GeneticAlgorithm/
+//　　　　　　　：http://www.nicovideo.jp/watch/sm16597051（動作を繰り返す点を参考）
+//       　　　：http://www.sist.ac.jp/~kanakubo/research/evolutionary_computing/ga_operators.html
+//　　　　　　　　（選択・交叉に関する研究内容を参考）  　
 //-------------------------------------------------------
 
 
@@ -77,6 +80,7 @@ public class GenManager : MonoBehaviour {
 
 	}
 
+
 	//-----------------------------------------------------
 	//【関数定義】パラメータの初期化
 	//-----------------------------------------------------
@@ -97,16 +101,22 @@ public class GenManager : MonoBehaviour {
 			for( int j=0; j<6; ++j ) {
 
 				finParam lp = param.creatureParams[i].finParams[j];　　
+				lp.RotRange = new Vector3[4];
 				if( j<3 ){
-				    lp.RotRange = new Vector3(
-					    	Random.Range(-bodyRotateLimit.x, bodyRotateLimit.x),
-						    Random.Range(-bodyRotateLimit.y, bodyRotateLimit.y),
-						    Random.Range(-bodyRotateLimit.z, bodyRotateLimit.z));
+					// 4動作分の値を保持する
+					  for(int k=0; k<4; k++){
+				      lp.RotRange[k] = new Vector3(
+					      	Random.Range(-bodyRotateLimit.x, bodyRotateLimit.x),
+						      Random.Range(-bodyRotateLimit.y, bodyRotateLimit.y),
+						      Random.Range(-bodyRotateLimit.z, bodyRotateLimit.z));
+						}
 					}else{
-						lp.RotRange = new Vector3(
-								Random.Range(-finRotateLimit.x, finRotateLimit.x),
-								Random.Range(-finRotateLimit.y, finRotateLimit.y),
-								Random.Range(-finRotateLimit.z, finRotateLimit.z));
+						for(int k=0; k<4; k++){
+						  lp.RotRange[k] = new Vector3(
+							  	Random.Range(-finRotateLimit.x, finRotateLimit.x),
+								  Random.Range(-finRotateLimit.y, finRotateLimit.y),
+								  Random.Range(-finRotateLimit.z, finRotateLimit.z));
+						 }
 					}
 
 				param.creatureParams[i].finParams[j] = lp;
@@ -269,6 +279,7 @@ public class GenManager : MonoBehaviour {
 
 		CreatureParam[] surviver = new CreatureParam[param.surviveCount];
 		calcscore();
+		//　エリート選択方式
 		for( int i = 0; i<param.surviveCount; i++){
 			int sc = bestScoreIds[i];
  		  surviver[i]= param.creatureParams[sc];
@@ -319,9 +330,15 @@ public class GenManager : MonoBehaviour {
 			CreatureParam np;
 
 			np.finParams = new finParam[6];
-			//　6つの関節に関してそれぞれ、上記で選んだ親のどちらかのパラメータをコピーする
+
+			//　6つの関節に関してそれぞれ、かつ4つの動作についてそれぞれ上記で選んだ親のどちらかのパラメータをコピーする
+			//　現在は一様交叉→進化が速い一方、比較的優秀な個体が破壊される危険も
+			//　進化の前半にとどめておくべきかも
 			for( int j=0; j<6; ++j ) {
-				np.finParams[j] = cp[ Random.Range(0,2) ].finParams[j];
+				np.finParams[j].RotRange = new Vector3[4];
+				for( int k=0; k<4; k++){
+				  np.finParams[j].RotRange[k] = cp[ Random.Range(0,2) ].finParams[j].RotRange[k];
+				}
 			}
 
 		  return np;
@@ -347,16 +364,21 @@ public class GenManager : MonoBehaviour {
 　　//　パラメータを突然変異させる関節をランダムに選ぶ
 		int lr = Random.Range(0,6);
 		finParam lp = np.finParams[lr];
+		lp.RotRange = new Vector3[4];
 		if( lr<3 ){
-				lp.RotRange = new Vector3(
-						Random.Range(-bodyRotateLimit.x, bodyRotateLimit.x),
-						Random.Range(-bodyRotateLimit.y, bodyRotateLimit.y),
-						Random.Range(-bodyRotateLimit.z, bodyRotateLimit.z));
+			  for(int k=0; k<4; k++){
+				  lp.RotRange[k] = new Vector3(
+						  Random.Range(-bodyRotateLimit.x, bodyRotateLimit.x),
+						  Random.Range(-bodyRotateLimit.y, bodyRotateLimit.y),
+						  Random.Range(-bodyRotateLimit.z, bodyRotateLimit.z));
+				}
 			}else{
-				lp.RotRange = new Vector3(
-						Random.Range(-finRotateLimit.x, finRotateLimit.x),
-						Random.Range(-finRotateLimit.y, finRotateLimit.y),
-						Random.Range(-finRotateLimit.z, finRotateLimit.z));
+				for(int k=0; k<4; k++){
+				  lp.RotRange[k] = new Vector3(
+					  	Random.Range(-finRotateLimit.x, finRotateLimit.x),
+						  Random.Range(-finRotateLimit.y, finRotateLimit.y),
+						  Random.Range(-finRotateLimit.z, finRotateLimit.z));
+				}
 			}
 
     np.finParams[lr] = lp;
