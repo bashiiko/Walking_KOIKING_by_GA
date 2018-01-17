@@ -42,6 +42,8 @@ public class GenManager : MonoBehaviour {
 
 	protected float[] bestScores = new float[10];
 	protected int[] bestScoreIds = new int[10];
+	protected float ave;　　　　　　　　  // スコアの平均値
+	protected float sum;                //　スコアの合計値
 
 	public int targetID = -1;           //　カメラの中心となる個体
 
@@ -212,6 +214,18 @@ public class GenManager : MonoBehaviour {
 				xs.Serialize(fs, param);
 				fs.Close();
 			}
+
+			//　スコアの平均値と最大値をCSVファイルに記録
+			try {
+			  using (var sw = new System.IO.StreamWriter(@"Export/result4.csv", true)){
+				  sw.WriteLine("{0},{1}", bestScores[0], ave);
+	 		  }
+	    }
+			catch (System.Exception e) {
+			 // ファイルを開くのに失敗したときエラーメッセージを表示
+			 System.Console.WriteLine(e.Message);
+	    }
+
 		}
 	}
 
@@ -242,15 +256,20 @@ public class GenManager : MonoBehaviour {
 
 		Dictionary<int, float> scoreList = new Dictionary<int, float>();
 
+		sum = 0;
+
 	  for( int i=0; i<param.creatureCount; ++i ) {
 		  Creature creature = currentCreatures[i];
 			// スコア（進んだ距離）を計算
 		  float score = creature.transform.position.z;
+			sum += score;
 		  // スコア（飛んだ高さ）を計算
 		  //float score = max_position_y[i] ;
 		  //float score = creature.transform.position.y;
 		  scoreList.Add(i, score);
 		}
+
+		ave = sum / param.creatureCount; // 今世代のスコアの平均値
 
 		int sc = 0;
 		// OrderByDescending : 降順にソート(valueをソート時のキーとする)
@@ -304,6 +323,28 @@ public class GenManager : MonoBehaviour {
 
 
 	//-----------------------------------------------------
+	//【関数定義】ルーレット選択
+	//-----------------------------------------------------
+	protected int Roulette()
+	{
+		int i;
+
+		//　0~sum（適合度の合計）の間でランダムな数を選択
+		float rand = Random.Range(0,sum);
+		float fitness = 0;
+
+		//　個体を一つずつ取り出し、適合度（スコア）がrandを越えたら終了
+		for( i=0; i<param.creatureCount; ++i ){
+			Creature creature = currentCreatures[i];
+			fitness += creature.transform.position.z;
+			if( fitness > rand ) break;
+		}
+
+		return i;
+	}
+
+
+	//-----------------------------------------------------
 	//【関数定義】交叉
 	//　引数　surviver：次の個体にパラメータがそのまま受け継がれる個体のデータの集合
 	//　戻り値　np：交叉後の個体（コイキング）のデータ
@@ -312,8 +353,12 @@ public class GenManager : MonoBehaviour {
 	//　　　　　finParams    ：CreatureParamが保持している回転値（↑）
 	//　コメント　正直これ以上変えようがない気がする
 	//-----------------------------------------------------
-  protected CreatureParam Cross(CreatureParam[] surviver){
+  protected CreatureParam[] Cross(CreatureParam[] surviver){
 
+		　//-----------------------------------------------------
+　　　//　【１】親をエリート世代から選択する場合
+　　　//-----------------------------------------------------
+      /*
 			List<int> indices = new List<int>();
 			for( int j=0; j<param.surviveCount; ++j ) {
 				indices.Add(j);
@@ -325,19 +370,39 @@ public class GenManager : MonoBehaviour {
 			int i2 = indices[Random.Range(0,param.surviveCount-1)];
 
 			CreatureParam[] cp = new CreatureParam[]{ surviver[i1], surviver[i2] };
+      */
 
-			// copy fin params ramdomely
-			CreatureParam np;
+			//-----------------------------------------------------
+		  //　【２】親をルーレット方式で選択する場合
+		  //-----------------------------------------------------
+      //　親を2体選択
+			int parent1 = Roulette();
+			int parent2 = Roulette();
 
-			np.finParams = new finParam[6];
+			CreatureParam[] cp　= new CreatureParam[]{ param.creatureParams[parent1], param.creatureParams[parent2] };
+
+
+			//-----------------------------------------------------
+ 		  //　【１】【２】共通
+ 		  //-----------------------------------------------------
+			CreatureParam[] np = new CreatureParam[2];
+
+			np[0].finParams = new finParam[6];
+      np[1].finParams = new finParam[6];
 
 			//　6つの関節に関してそれぞれ、かつ4つの動作についてそれぞれ上記で選んだ親のどちらかのパラメータをコピーする
 			//　現在は一様交叉→進化が速い一方、比較的優秀な個体が破壊される危険も
 			//　進化の前半にとどめておくべきかも
 			for( int j=0; j<6; ++j ) {
-				np.finParams[j].RotRange = new Vector3[4];
+				np[0].finParams[j].RotRange = new Vector3[4];
+				np[1].finParams[j].RotRange = new Vector3[4];
 				for( int k=0; k<4; k++){
-				  np.finParams[j].RotRange[k] = cp[ Random.Range(0,2) ].finParams[j].RotRange[k];
+					int mask = Random.Range(0,2);
+				  np[0].finParams[j].RotRange[k] = cp[ mask ].finParams[j].RotRange[k];
+
+					if( mask == 0 ) mask = 1;
+					else mask = 0;
+				  np[1].finParams[j].RotRange[k] = cp[ mask ].finParams[j].RotRange[k];
 				}
 			}
 
@@ -421,22 +486,26 @@ public class GenManager : MonoBehaviour {
 		//　次の世代に新たに生成する個体の数を計算
 		int newCount = param.creatureCount - param.surviveCount;
 
+    int mutation = 0;
 
 		//-----------------------------------------------------
 	　//　交叉
 		//-----------------------------------------------------
-		for( int i=0; i<newCount; ++i ) {
-			CreatureParam np = Cross(surviver);
+		for( int i=0; i<newCount; i+=2 ) {
+			CreatureParam[] np = Cross(surviver);
 
 			//-----------------------------------------------------
 		　//　突然変異
 			//-----------------------------------------------------
-			if( i < param.mutationCount ) {
-				np = Mutation(np);
+			if( mutation < param.mutationCount ) {
+				np[0] = Mutation(np[0]);
+				np[1] = Mutation(np[1]);
+				mutation+=2;
       }
 
 			//　交叉、突然変異した個体を次の世代に登録
-		  param.creatureParams[i + param.surviveCount] = np;
+		  param.creatureParams[i + param.surviveCount] = np[0];
+		  param.creatureParams[i + 1 + param.surviveCount] = np[1];
 
 		}
 	}
