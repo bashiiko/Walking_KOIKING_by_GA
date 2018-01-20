@@ -7,9 +7,9 @@ public class finRotator : MonoBehaviour {
 
 	protected float[] Limit;
 	protected int[] dir = new int[3]; //　ひれの進む方向（正か負か）
-  protected float[] rot = new float[3]{ 0, 0, 0 }; //　現在のrotation
+    protected float[] rot = new float[3]{ 0, 0, 0 }; //　現在のrotation
 	protected int[] order = new int[3]{ 0, 0, 0 }; //　現在の動作が何番目か（0~3の状態を繰り返す。x,y,z方向それぞれに対して値を持つ
-  protected int[] trip = new int[3]{ 0, 0, 0 }; //　動作が往復していれば1,一回目なら0
+    protected int[] trip = new int[3]{ 0, 0, 0 }; //　動作が往復していれば1,一回目なら0
 
 
 	// Use this for initialization
@@ -35,7 +35,7 @@ public class finRotator : MonoBehaviour {
 		}
 		*/
 		for(int i=0; i<3; i++){
-      if( System.Math.Abs(rot[i]) > System.Math.Abs(Limit[i])){
+          if( System.Math.Abs(rot[i]) > System.Math.Abs(Limit[i])){
 				if( trip[i] == 0 ){
 					dir[i] *= -1;
 					trip[i] = 1;
@@ -53,7 +53,7 @@ public class finRotator : MonoBehaviour {
 				}
 			}
 			rot[i] += dir[i];
-		}
+	     	}
 
 
     //　現在の回転値の取得（Quaternion→Vector）

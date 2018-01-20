@@ -10,9 +10,9 @@ public class GenManagerEditor : Editor {
 		GenManager obj = target as GenManager;
 
 		EditorGUILayout.LabelField("Generations: ", obj.genCount.ToString());
-		obj.creatureCount = EditorGUILayout.IntSlider("CreatureCount", obj.creatureCount, 1,100);
-		obj.surviveCount = EditorGUILayout.IntSlider("SurvivorCount", obj.surviveCount,1,100);
-		obj.mutationCount = EditorGUILayout.IntSlider("MutationCount", obj.mutationCount,1,100);
+		obj.creatureCount = EditorGUILayout.IntSlider("CreatureCount", obj.creatureCount, 1,200);
+		obj.surviveCount = EditorGUILayout.IntSlider("SurvivorCount", obj.surviveCount,0,100);
+		obj.mutationCount = EditorGUILayout.IntSlider("MutationCount", obj.mutationCount,0,100);
 
 		obj.genDuration = EditorGUILayout.Slider("GenDuration", obj.genDuration, 1, 60);
 		obj.finRotateLimit = EditorGUILayout.Vector3Field("finRotateLimit", obj.finRotateLimit);

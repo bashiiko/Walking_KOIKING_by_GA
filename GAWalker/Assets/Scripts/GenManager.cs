@@ -4,7 +4,10 @@
 //　参考コード等：http://developer.wonderpla.net/entry/blog/engineer/GeneticAlgorithm/
 //　　　　　　　：http://www.nicovideo.jp/watch/sm16597051（動作を繰り返す点を参考）
 //       　　　：http://www.sist.ac.jp/~kanakubo/research/evolutionary_computing/ga_operators.html
-//　　　　　　　　（選択・交叉に関する研究内容を参考）  　
+//　　　　　　　　（選択・交叉に関する研究内容を参考）
+//　役割分担：秋元【select() 320行～】
+//           池田【Mutation() 430行～】
+//           小林【その他、GenManager.cs以外のスクリプト】
 //-------------------------------------------------------
 
 
@@ -22,8 +25,8 @@ public class GenManager : MonoBehaviour {
 
 	public GameObject creature;
 	public int creatureCount   = 100;　　//　個体の総数
-	public int surviveCount  = 10;　 　  //　親世代から子世代へ受け継がれる個体の数　
-	public int mutationCount = 10;　　 　//　突然変異する個体の数
+	public int surviveCount  = 0;　 　  //　親世代から子世代へ受け継がれる個体の数　
+	public int mutationCount = 1;　　 　//　突然変異する個体の数
 
 	protected Creature[] currentCreatures;
 
@@ -35,21 +38,22 @@ public class GenManager : MonoBehaviour {
 
 	public int genCount;　　　　　 　　　//　世代数
 
-	public Vector3 finRotateLimit = new Vector3(30,30,30);　　　//　ひれの回転の制限（度）
-  public Vector3 bodyRotateLimit = new Vector3(20,20,20);　　　//　体の回転の制限（度）
+	public Vector3 finRotateLimit = new Vector3(40,40,40);　　　//　ひれの回転の制限（度）
+  public Vector3 bodyRotateLimit = new Vector3(10,10,10);　　　//　体の回転の制限（度）
   //public float[] max_position_y;
   //public float[] max_position_z;
 
-	protected float[] bestScores = new float[10];
-	protected int[] bestScoreIds = new int[10];
+	protected float[] bestScores = new float[100];
+	protected int[] bestScoreIds = new int[100];
+
 	protected float ave;　　　　　　　　  // スコアの平均値
 	protected float sum;                //　スコアの合計値
+	//protected float[] score_calc_ver2 = new float[100];
 
 	public int targetID = -1;           //　カメラの中心となる個体
 
-
 	//-----------------------------------------------------
-	//【関数定義】初期化（オブジェクト起動時に実行される）
+	//【関数定義】初期化（オブジェクト起動時に実行される）（担当：小林）
 	//-----------------------------------------------------
 	void Start () {
 
@@ -84,18 +88,16 @@ public class GenManager : MonoBehaviour {
 
 
 	//-----------------------------------------------------
-	//【関数定義】パラメータの初期化
+	//【関数定義】パラメータの初期化（担当：小林）
 	//-----------------------------------------------------
 	void initParam() {
 
 		param.genCount = 1;
 		param.creatureParams = new CreatureParam[param.creatureCount];
-    //max_position_z = new float[param.creatureCount];
     //max_position_y = new float[param.creatureCount];
 
 　　// 生物の各個体にパラメータを設定
 		for( int i=0; i<param.creatureCount; ++i ) {
-		  //max_position_z[i] = 0;
 			//max_position_y[i] = 0;
 			param.creatureParams[i].finParams = new finParam[6];
 
@@ -129,7 +131,7 @@ public class GenManager : MonoBehaviour {
 
 
 	//-----------------------------------------------------
-	//【関数定義】次の世代の準備（毎世代の初めに呼ばれる）
+	//【関数定義】次の世代の準備（毎世代の初めに呼ばれる）（担当：小林）
 	//-----------------------------------------------------
 	void prepareCreatures() {
 		for( int i=0; i<param.creatureCount; ++i ) {
@@ -148,7 +150,7 @@ public class GenManager : MonoBehaviour {
 
 
 	//-----------------------------------------------------
-	//【関数定義】個体の削除
+	//【関数定義】個体の削除（担当：小林）
 	//-----------------------------------------------------
 	void deleteCreatures() {
 		for( int i=0; i<param.creatureCount; ++i ) {
@@ -159,22 +161,13 @@ public class GenManager : MonoBehaviour {
 
 
 	//-----------------------------------------------------
-	//【関数定義】更新（残り時間の計算、外部ファイルへの記録、カメラの移動）
+	//【関数定義】更新（残り時間の計算、外部ファイルへの記録、カメラの移動）（担当：小林）
 	//-----------------------------------------------------
-	// Update is called once per frame
+	// 0.02sに一回呼び出される
 	void FixedUpdate () {
 
 		genDurationLeft -= Time.fixedDeltaTime;
 		calcscore();
-
-    /*
-		//　各個体の高さの最高値を記録
-	  for( int i=0; i<param.creatureCount; ++i ) {
-			Creature creature = currentCreatures[i];
-			if( max_position_z[i] < creature.transform.position.z )
-   		  max_position_z[i] = creature.transform.position.z;
-		}
-		*/
 
     /*
 		//　各個体の高さの最高値を記録
@@ -216,8 +209,9 @@ public class GenManager : MonoBehaviour {
 			}
 
 			//　スコアの平均値と最大値をCSVファイルに記録
+		　/*
 			try {
-			  using (var sw = new System.IO.StreamWriter(@"Export/result4.csv", true)){
+			  using (var sw = new System.IO.StreamWriter(@"Export/result7.csv", true)){
 				  sw.WriteLine("{0},{1}", bestScores[0], ave);
 	 		  }
 	    }
@@ -225,12 +219,13 @@ public class GenManager : MonoBehaviour {
 			 // ファイルを開くのに失敗したときエラーメッセージを表示
 			 System.Console.WriteLine(e.Message);
 	    }
+			*/
 
 		}
 	}
 
 	//-----------------------------------------------------
-	//【関数定義】 文字表示（世代数など）
+	//【関数定義】 文字表示（世代数など）（担当：小林）
 	//-----------------------------------------------------
 	void OnGUI() {
 		string str = "";
@@ -248,7 +243,7 @@ public class GenManager : MonoBehaviour {
 	}
 
 	//-----------------------------------------------------
-  //【関数定義】ベストスコアの計算
+  //【関数定義】ベストスコアの計算（担当：小林）
 	//-----------------------------------------------------
   void calcscore(){
 	  //　辞書型のリストを定義
@@ -258,6 +253,9 @@ public class GenManager : MonoBehaviour {
 
 		sum = 0;
 
+		//-----------------------------------------------------
+		//　【１】現在地のz軸方向の値で評価（大きいほど良い）
+		//-----------------------------------------------------
 	  for( int i=0; i<param.creatureCount; ++i ) {
 		  Creature creature = currentCreatures[i];
 			// スコア（進んだ距離）を計算
@@ -265,7 +263,6 @@ public class GenManager : MonoBehaviour {
 			sum += score;
 		  // スコア（飛んだ高さ）を計算
 		  //float score = max_position_y[i] ;
-		  //float score = creature.transform.position.y;
 		  scoreList.Add(i, score);
 		}
 
@@ -275,59 +272,86 @@ public class GenManager : MonoBehaviour {
 		// OrderByDescending : 降順にソート(valueをソート時のキーとする)
 		foreach(KeyValuePair<int, float> pair in scoreList.OrderByDescending(p => p.Value) ) {
 
-			//　より前に進んだ個体を10個記録する
-			if( sc < 10 ) {
+			//　優秀な個体を10個記録する
+			if( sc < 10) {
 				bestScores[sc] = pair.Value;　//　進んだ距離
 				bestScoreIds[sc] = pair.Key;　//　個体番号
 			}
 			sc++;
 
 		}
+
+
+		//-----------------------------------------------------
+		//　【２】目的地との差で評価（小さいほど良い）
+		//-----------------------------------------------------
+		/*
+		for( int i=0; i<param.creatureCount; ++i ) {
+			Creature creature = currentCreatures[i];
+			// スコア（目的地:150mとの差）を計算
+      float x_pos = creature.transform.position.x;
+      float z_pos = creature.transform.position.z;
+      float x_first = (i - param.creatureCount/2) * 15;
+
+			float score = (float)System.Math.Sqrt( System.Math.Pow( ( x_pos-x_first ),2 ) + System.Math.Pow( ( z_pos-150 ),2 ) );
+
+			sum += score;
+			score_calc_ver2[i] = score;
+			scoreList.Add(i, score);
+		}
+
+		ave = sum / param.creatureCount; // 今世代のスコアの平均値
+
+		int sc = 0;
+		// OrderByDescending : 昇順にソート(valueをソート時のキーとする)
+		foreach(KeyValuePair<int, float> pair in scoreList.OrderBy(p => p.Value) ) {
+
+			//　優秀な個体を10個記録する
+			if( sc < param.creatureCount ) {
+				bestScores[sc] = pair.Value;　//　目的地との差
+				bestScoreIds[sc] = pair.Key;　//　個体番号
+			}
+			sc++;
+
+		}
+		*/
 
 	}
 
 
 　//-----------------------------------------------------
-	//【関数定義】選択
-	//　引数　scoreList：辞書型のリスト。個体番号とそれぞれのスコア（飛距離）を記録
-	//　戻り値　surviver：次の個体にパラメータがそのまま受け継がれる個体のデータの集合
-	//　その他　CreatureParam：個体（コイキング）のデータ。各関節における、軸ごとの回転値を保持
-	//　コメント　現在は飛距離のみで評価。選択方法のアイディアだけでもください！！（減点とか）
+	//【関数定義】選択（担当：秋元）
 　//-----------------------------------------------------
   protected CreatureParam[] Select(){
 
 		CreatureParam[] surviver = new CreatureParam[param.surviveCount];
 		calcscore();
-		//　エリート選択方式
+
+		//　エリート保存戦略
 		for( int i = 0; i<param.surviveCount; i++){
 			int sc = bestScoreIds[i];
  		  surviver[i]= param.creatureParams[sc];
 		}
-		/*
-		// OrderByDescending : 降順にソート(valueをソート時のキーとする)
-		foreach(KeyValuePair<int, float> pair in scoreList.OrderByDescending(p => p.Value) ) {
-			surviver[sc]= param.creatureParams[pair.Key];
-
-			//　より前に進んだ個体を10個記録する
-			if( sc < 10 ) {
-				bestScores[sc] = pair.Value;　//　進んだ距離
-				bestScoreIds[sc] = pair.Key;　//　個体番号
-			}
-			sc++;
-			if( sc >= param.surviveCount ) break;　//　次の世代に残す個体数がsc(<=10)を下回ったら終了
-		}
-		*/
 
 		return surviver;
 	}
 
 
 	//-----------------------------------------------------
-	//【関数定義】ルーレット選択
+	//【関数定義】ルーレット選択（担当：小林）
 	//-----------------------------------------------------
 	protected int Roulette()
 	{
 		int i;
+
+    //　評価方法【２】の場合のみ
+		/*
+		sum = 0;
+		for( i=0; i<param.creatureCount; ++i ){
+			sum += 1/score_calc_ver2[i];
+		}
+		*/
+
 
 		//　0~sum（適合度の合計）の間でランダムな数を選択
 		float rand = Random.Range(0,sum);
@@ -337,6 +361,7 @@ public class GenManager : MonoBehaviour {
 		for( i=0; i<param.creatureCount; ++i ){
 			Creature creature = currentCreatures[i];
 			fitness += creature.transform.position.z;
+			//fitness += 1/score_calc_ver2[i];
 			if( fitness > rand ) break;
 		}
 
@@ -345,13 +370,7 @@ public class GenManager : MonoBehaviour {
 
 
 	//-----------------------------------------------------
-	//【関数定義】交叉
-	//　引数　surviver：次の個体にパラメータがそのまま受け継がれる個体のデータの集合
-	//　戻り値　np：交叉後の個体（コイキング）のデータ
-	//　その他　surviveCount ：今世代の優秀な個体（親となる）の個体数。現在の設定は10
-	//　　　　　CreatureParam：個体（コイキング）のデータ。各関節における、軸ごとの回転値を保持
-	//　　　　　finParams    ：CreatureParamが保持している回転値（↑）
-	//　コメント　正直これ以上変えようがない気がする
+	//【関数定義】交叉（担当：小林）
 	//-----------------------------------------------------
   protected CreatureParam[] Cross(CreatureParam[] surviver){
 
@@ -411,14 +430,7 @@ public class GenManager : MonoBehaviour {
 
 
   //-----------------------------------------------------
-	//【関数定義】突然変異
-	//　引数　np：突然変異する個体のデータ
-	//　戻り値　np：突然変異後の個体のデータ
-	//　その他　finRotateLimit：各関節の回転の制限値で、x,y,z軸方向に今はそれぞれ60度（変更予定）
-	//　　　　　RotRange      ：各関節の回転範囲。finRotateLimit（↑）の範囲内でランダムで決定している
-	//　　　　　CreatureParam ：個体（コイキング）のデータ。各関節における、軸ごとの回転値を保持
-	//　　　　　finParams     ：CreatureParamが保持している回転値（↑）
-	//　コメント　変えるとしたら呼び出し元の関数かも（無能）
+	//【関数定義】突然変異（担当：池田）
 	//-----------------------------------------------------
 　protected CreatureParam Mutation(CreatureParam np){
 	  //　関節のパラメータを1~4回ランダムで変更する
@@ -454,25 +466,10 @@ public class GenManager : MonoBehaviour {
 
 
 	//-----------------------------------------------------
-	//【関数定義】次の世代の個体の設定
+	//【関数定義】次の世代の個体の設定（担当：小林）
 	//-----------------------------------------------------
 	protected void calcNextGenParams() {
-
-    /*
-　　//　辞書型のリストを定義
-　　//　creatureCount<int>, score<float>を格納する
-		Dictionary<int, float> scoreList = new Dictionary<int, float>();
-
-		for( int i=0; i<param.creatureCount; ++i ) {
-			//Creature creature = currentCreatures[i];
-			// スコア（飛んだ高さ）を計算
-			float score = max_position_z[i] ;
-			//float score = max_position_y[i] ;
-			//float score = creature.transform.position.y;
-			scoreList.Add(i, score);
-		}
-    */
-
+　　
 		//-----------------------------------------------------
 	　//　選択
 		//-----------------------------------------------------
@@ -505,6 +502,7 @@ public class GenManager : MonoBehaviour {
 
 			//　交叉、突然変異した個体を次の世代に登録
 		  param.creatureParams[i + param.surviveCount] = np[0];
+			if( i+1 < newCount)
 		  param.creatureParams[i + 1 + param.surviveCount] = np[1];
 
 		}
